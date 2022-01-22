@@ -1,0 +1,35 @@
+version: '3.3'
+services:
+  spring:
+    container_name: spring
+    image: miorgash/spring:latest
+    # build if not exists
+    build:
+      context: ../
+      dockerfile: docker/spring/Dockerfile # relative path from build context above
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    command: java -jar /app.jar
+    restart: always
+  cassandra:
+    container_name: cassandra
+    image: cassandra:latest
+    environment:
+      - CASSANDRA_USER=user
+      - CASSANDRA_PASSWORD=pass
+      - MAX_HEAP_SIZE=256M
+      - HEAP_NEWSIZE=128M
+    restart: always
+    volumes:
+      - ./out/cassandra_data:/var/lib/cassandra
+  cassandra-load-keyspace:
+    container_name: cassandra-load-keyspace
+    image: cassandra:latest
+    depends_on:
+      - cassandra
+    ports:
+      - "9043:9042"
+    volumes:
+      - ./cassandra/initdb/schema.cql:/schema.cql
+    command: /bin/bash -c "sleep 60 && echo loading cassandra keyspace && cqlsh cassandra -f /schema.cql"
